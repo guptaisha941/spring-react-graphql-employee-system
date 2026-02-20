@@ -106,7 +106,7 @@ public class EmployeeService {
     }
 
     private Sort parseSort(String sort) {
-        if (sort == null || sort.isBlank()) {
+        if (sort == null || sort.trim().isEmpty()) {
             sort = DEFAULT_SORT;
         }
         String trimmed = sort.trim();

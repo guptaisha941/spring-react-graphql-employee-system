@@ -4,7 +4,7 @@ import com.company.employee.dto.EmployeeFilter;
 import com.company.employee.dto.EmployeeRequest;
 import com.company.employee.dto.EmployeeResponse;
 import com.company.employee.service.EmployeeService;
-import jakarta.validation.Valid;
+import javax.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;

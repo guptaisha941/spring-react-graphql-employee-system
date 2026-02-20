@@ -1,6 +1,6 @@
 import { useState, useMemo, memo } from 'react'
 import { motion } from 'framer-motion'
-import { FaSort, FaSortUp, FaSortDown } from 'react-icons/fa'
+import { FaSort, FaSortUp, FaSortDown, FaEdit, FaTrash, FaSpinner } from 'react-icons/fa'
 import Pagination from './Pagination'
 import LoadingSkeleton from './LoadingSkeleton'
 import ErrorState from './ErrorState'
@@ -14,11 +14,23 @@ const DataTableComponent = ({
   loading = false, 
   error = null,
   itemsPerPage = 10,
-  onRetry = null
+  onRetry = null,
+  onEdit = null,
+  onDelete = null,
+  deletingId = null,
+  currentPage: externalCurrentPage = 0,
+  totalPages: externalTotalPages = 0,
+  onPageChange = null,
+  disableClientSort = false,
+  onSortChange = null
 }) => {
-  const [currentPage, setCurrentPage] = useState(1)
+  const [internalCurrentPage, setInternalCurrentPage] = useState(1)
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' })
   const [viewMode, setViewMode] = useState('table') // 'table' or 'tile'
+  
+  // Use external pagination if provided, otherwise internal
+  const currentPage = onPageChange ? externalCurrentPage + 1 : internalCurrentPage
+  const totalPages = externalTotalPages || 0
 
   // Default columns if none provided
   const defaultColumns = useMemo(() => {
@@ -43,13 +55,26 @@ const DataTableComponent = ({
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc'
     }
-    setSortConfig({ key, direction })
-    setCurrentPage(1) // Reset to first page on sort
+    const newSortConfig = { key, direction }
+    setSortConfig(newSortConfig)
+    
+    if (disableClientSort && onSortChange) {
+      // Backend sorting - notify parent
+      const sortString = `${key},${direction}`
+      onSortChange(sortString)
+    } else {
+      // Client-side sorting - reset to first page
+      if (onPageChange) {
+        onPageChange(0)
+      } else {
+        setInternalCurrentPage(1)
+      }
+    }
   }
 
-  // Sorted data
+  // Sorted data - only sort client-side if not using backend sorting
   const sortedData = useMemo(() => {
-    if (!sortConfig.key) return data
+    if (disableClientSort || !sortConfig.key) return data
 
     return [...data].sort((a, b) => {
       const aValue = a[sortConfig.key]
@@ -66,15 +91,21 @@ const DataTableComponent = ({
 
       return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue
     })
-  }, [data, sortConfig])
+  }, [data, sortConfig, disableClientSort])
 
-  // Paginated data
+  // Paginated data - use backend pagination if provided, otherwise client-side
   const paginatedData = useMemo(() => {
+    if (onPageChange && totalPages > 0) {
+      // Backend pagination - use data as-is
+      return sortedData
+    }
+    // Client-side pagination
     const startIndex = (currentPage - 1) * itemsPerPage
     return sortedData.slice(startIndex, startIndex + itemsPerPage)
-  }, [sortedData, currentPage, itemsPerPage])
+  }, [sortedData, currentPage, itemsPerPage, onPageChange, totalPages])
 
-  const totalPages = Math.ceil(sortedData.length / itemsPerPage)
+  const displayTotalPages = totalPages > 0 ? totalPages : Math.ceil(sortedData.length / itemsPerPage)
+  const displayCurrentPage = currentPage
 
   // Render sort icon
   const renderSortIcon = (columnKey) => {
@@ -165,12 +196,29 @@ const DataTableComponent = ({
                       <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {column.key === 'actions' ? (
                           <div className="flex items-center space-x-2">
-                            <button className="text-blue-600 hover:text-blue-800 font-medium">
-                              Edit
-                            </button>
-                            <button className="text-red-600 hover:text-red-800 font-medium">
-                              Delete
-                            </button>
+                            {onEdit && (
+                              <button
+                                onClick={() => onEdit(row._raw || row)}
+                                className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                                title="Edit"
+                              >
+                                <FaEdit />
+                              </button>
+                            )}
+                            {onDelete && (
+                              <button
+                                onClick={() => onDelete(row._raw || row)}
+                                disabled={deletingId === row.id}
+                                className="text-red-600 hover:text-red-800 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="Delete"
+                              >
+                                {deletingId === row.id ? (
+                                  <FaSpinner className="animate-spin" />
+                                ) : (
+                                  <FaTrash />
+                                )}
+                              </button>
+                            )}
                           </div>
                         ) : column.key === 'status' ? (
                           <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
@@ -196,11 +244,17 @@ const DataTableComponent = ({
       )}
 
       {/* Pagination */}
-      {totalPages > 1 && (
+      {displayTotalPages > 1 && (
         <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
+          currentPage={displayCurrentPage}
+          totalPages={displayTotalPages}
+          onPageChange={(page) => {
+            if (onPageChange) {
+              onPageChange(page - 1) // Convert to 0-based for backend
+            } else {
+              setInternalCurrentPage(page)
+            }
+          }}
         />
       )}
     </div>

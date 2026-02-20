@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, Navigate } from 'react-router-dom'
+import { useNavigate, Navigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { FaLock, FaUser, FaSpinner } from 'react-icons/fa'
 import api from '../services/api'
@@ -23,20 +23,23 @@ const Login = () => {
     setError('')
 
     try {
-      // Adjust endpoint/response shape to match your backend
-      const response = await api.post('/auth/login', {
-        email,
+      // Login endpoint matches backend: /v1/auth/login
+      const response = await api.post('/v1/auth/login', {
+        usernameOrEmail: email,
         password,
       })
 
-      const { token, user } = response.data
+      const { accessToken, username, roles } = response.data
+      const token = accessToken
 
-      // Fallback for demo if backend returns only token
-      const authUser = user || {
-        id: 1,
-        name: email,
-        role: 'admin',
-        isAdmin: true,
+      // Build user object from login response
+      const authUser = {
+        id: username,
+        name: username,
+        email: email,
+        role: roles && roles.length > 0 ? roles[0] : 'ROLE_EMPLOYEE',
+        roles: roles || [],
+        isAdmin: roles && roles.includes('ROLE_ADMIN'),
       }
 
       login(authUser, token)
@@ -79,19 +82,19 @@ const Login = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-200 mb-1">
-                Email
+                Username or Email
               </label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
                   <FaUser />
                 </span>
                 <input
-                  type="email"
+                  type="text"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="block w-full pl-10 pr-3 py-2.5 rounded-lg bg-slate-900/60 border border-slate-600 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                  placeholder="you@example.com"
+                  placeholder="admin or admin@example.com"
                 />
               </div>
             </div>
@@ -144,9 +147,19 @@ const Login = () => {
           </form>
 
           <p className="mt-4 text-xs text-slate-400 text-center">
-            Demo: adjust `/auth/login` endpoint and response in `Login.jsx` to
-            match your backend.
+            Don't have an account?{' '}
+            <Link to="/register" className="text-blue-400 hover:text-blue-300 underline">
+              Sign up
+            </Link>
           </p>
+          
+          <div className="mt-4 pt-4 border-t border-slate-700">
+            <p className="text-xs text-slate-400 text-center mb-2">Demo Credentials:</p>
+            <div className="text-xs text-slate-300 space-y-1">
+              <p><strong>Admin:</strong> admin / password123</p>
+              <p><strong>Employee:</strong> employee1 / password123</p>
+            </div>
+          </div>
         </div>
       </motion.div>
     </div>

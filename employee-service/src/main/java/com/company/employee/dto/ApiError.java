@@ -26,6 +26,7 @@ public class ApiError {
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
+    @Builder
     public static class FieldError {
         private String field;
         private String message;

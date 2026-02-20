@@ -6,7 +6,7 @@ import com.company.employee.dto.RegisterRequest;
 import com.company.employee.dto.RefreshTokenRequest;
 import com.company.employee.model.User;
 import com.company.employee.service.AuthService;
-import jakarta.validation.Valid;
+import javax.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

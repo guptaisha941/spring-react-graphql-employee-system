@@ -1,6 +1,6 @@
 package com.company.employee.model;
 
-import jakarta.persistence.*;
+import javax.persistence.*;
 import lombok.*;
 
 import org.springframework.data.annotation.CreatedDate;

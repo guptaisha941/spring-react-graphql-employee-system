@@ -1,4 +1,5 @@
 import axios from 'axios'
+import logger from '../utils/logger'
 
 // Validate required environment variable
 const API_URL = import.meta.env.VITE_API_URL
@@ -26,7 +27,7 @@ api.interceptors.request.use(
     return config
   },
   (error) => {
-    console.error('Request error:', error)
+    logger.error('Request error:', error)
     return Promise.reject(error)
   }
 )
@@ -37,14 +38,17 @@ api.interceptors.response.use(
   (error) => {
     // Handle common errors
     if (error.response?.status === 401) {
-      // Handle unauthorized access
+      // Handle unauthorized access - clear tokens and redirect
       localStorage.removeItem('token')
       localStorage.removeItem('user')
-      window.location.href = '/login'
+      // Only redirect if not already on login page
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login'
+      }
     } else if (error.code === 'ECONNABORTED') {
-      console.error('Request timeout:', error.config?.url)
+      logger.error('Request timeout:', error.config?.url)
     } else if (!error.response) {
-      console.error('Network error:', error.message)
+      logger.error('Network error:', error.message)
     }
     return Promise.reject(error)
   }

@@ -7,10 +7,9 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -41,7 +40,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  */
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity
+@EnableGlobalMethodSecurity(prePostEnabled = true)
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -62,22 +61,24 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .exceptionHandling(exception -> exception
-                        .authenticationEntryPoint(jwtAuthenticationEntryPoint)
-                        .accessDeniedHandler(accessDeniedHandler))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(AUTH_WHITELIST).permitAll()
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        // Only ADMIN can create, update or delete employees
-                        .requestMatchers(HttpMethod.POST, "/employees").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/employees/*").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/employees/*").hasRole("ADMIN")
-                        // ADMIN and EMPLOYEE can view (list and get by id)
-                        .requestMatchers(HttpMethod.GET, "/employees", "/employees/*").hasAnyRole("ADMIN", "EMPLOYEE")
-                        .anyRequest().authenticated())
+                .csrf().disable()
+                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                .and()
+                .exceptionHandling()
+                    .authenticationEntryPoint(jwtAuthenticationEntryPoint)
+                    .accessDeniedHandler(accessDeniedHandler)
+                .and()
+                .authorizeRequests()
+                    .antMatchers(AUTH_WHITELIST).permitAll()
+                    .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                    // Only ADMIN can create, update or delete employees
+                    .antMatchers(HttpMethod.POST, "/employees").hasRole("ADMIN")
+                    .antMatchers(HttpMethod.PUT, "/employees/*").hasRole("ADMIN")
+                    .antMatchers(HttpMethod.DELETE, "/employees/*").hasRole("ADMIN")
+                    // ADMIN and EMPLOYEE can view (list and get by id)
+                    .antMatchers(HttpMethod.GET, "/employees", "/employees/*").hasAnyRole("ADMIN", "EMPLOYEE")
+                    .anyRequest().authenticated()
+                .and()
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

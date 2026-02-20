@@ -5,9 +5,10 @@ import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.SignatureException;
 import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.security.Keys;
-import io.jsonwebtoken.security.SignatureException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -41,10 +42,12 @@ public class JwtUtil {
     private final JwtProperties jwtProperties;
 
     private SecretKey getSigningKey() {
-        byte[] keyBytes = jwtProperties.getSecret().getBytes(StandardCharsets.UTF_8);
-        if (keyBytes.length < 32) {
+        String secret = jwtProperties.getSecret();
+        if (secret == null || secret.length() < 32) {
             throw new IllegalStateException("JWT secret must be at least 256 bits (32 characters)");
         }
+        byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+        // For JJWT 0.11.5, use Keys.hmacShaKeyFor which is available
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
@@ -54,13 +57,13 @@ public class JwtUtil {
         String rolesClaim = roles.stream().collect(Collectors.joining(","));
 
         return Jwts.builder()
-                .subject(username)
+                .setSubject(username)
                 .claim("roles", rolesClaim)
                 .claim("type", "access")
-                .issuer(jwtProperties.getIssuer())
-                .issuedAt(now)
-                .expiration(expiry)
-                .signWith(getSigningKey())
+                .setIssuer(jwtProperties.getIssuer())
+                .setIssuedAt(now)
+                .setExpiration(expiry)
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
@@ -69,27 +72,27 @@ public class JwtUtil {
         Date expiry = new Date(now.getTime() + jwtProperties.getRefreshExpirationMs());
 
         return Jwts.builder()
-                .subject(username)
+                .setSubject(username)
                 .claim("type", "refresh")
-                .issuer(jwtProperties.getIssuer())
-                .issuedAt(now)
-                .expiration(expiry)
-                .signWith(getSigningKey())
+                .setIssuer(jwtProperties.getIssuer())
+                .setIssuedAt(now)
+                .setExpiration(expiry)
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
     public String getUsernameFromToken(String token) {
-        return getClaims(token).getSubject();
+        return getClaims(token).getBody().getSubject();
     }
 
     public boolean isRefreshToken(String token) {
-        return "refresh".equals(getClaims(token).get("type", String.class));
+        return "refresh".equals(getClaims(token).getBody().get("type", String.class));
     }
 
     public List<SimpleGrantedAuthority> getAuthoritiesFromToken(String token) {
         try {
-            Claims payload = getClaims(token).getPayload();
-            String rolesClaim = payload.get("roles", String.class);
+            Claims claims = getClaims(token).getBody();
+            String rolesClaim = claims.get("roles", String.class);
             if (rolesClaim == null || rolesClaim.isEmpty()) {
                 return Collections.emptyList();
             }
@@ -121,9 +124,9 @@ public class JwtUtil {
     }
 
     private Jws<Claims> getClaims(String token) {
-        return Jwts.parser()
-                .verifyWith(getSigningKey())
+        return Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
                 .build()
-                .parseSignedClaims(token);
+                .parseClaimsJws(token);
     }
 }

@@ -53,7 +53,14 @@ export const AppProvider = ({ children }) => {
   }
 
   const isAuthenticated = !!user
-  const isAdmin = user?.role === 'admin' || user?.isAdmin === true
+  // Check if user has admin role (supports both ROLE_ADMIN and admin formats)
+  const isAdmin = user?.isAdmin === true || 
+                  user?.role === 'admin' || 
+                  user?.role === 'ROLE_ADMIN' ||
+                  (user?.roles && Array.isArray(user.roles) && (
+                    user.roles.includes('ROLE_ADMIN') || 
+                    user.roles.includes('admin')
+                  ))
 
   const value = {
     user,
