@@ -56,7 +56,7 @@ public class SecurityConfig {
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final AccessDeniedHandlerImpl accessDeniedHandler;
 
-    @Value("${cors.allowed-origins:http://localhost:3000,http://localhost:5173}")
+    @Value("${cors.allowed-origins:http://localhost:3000,http://localhost:5173,https://employee-frontend-neon.vercel.app,https://employee-frontend.onrender.com}")
     private String corsAllowedOrigins;
 
     /** Paths that do not require authentication (login, register, refresh, health). */
