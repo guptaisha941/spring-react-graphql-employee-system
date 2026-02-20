@@ -10,7 +10,7 @@ services:
     runtime: docker
     plan: free
     region: oregon
-    dockerfilePath: ./employee-service/Dockerfile
+    dockerfilePath: Dockerfile
     dockerContext: ./employee-service
     envVars:
       - key: SPRING_PROFILES_ACTIVE
