@@ -7,11 +7,12 @@ services:
   # Spring Boot Backend Service
   - type: web
     name: employee-backend
-    runtime: docker
+    runtime: java
     plan: free
     region: oregon
-    dockerfilePath: Dockerfile
-    dockerContext: ./employee-service
+    buildCommand: mvn clean package -DskipTests
+    startCommand: java -jar target/employee-service-*.jar
+    rootDir: employee-service
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: prod
