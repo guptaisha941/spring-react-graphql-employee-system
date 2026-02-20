@@ -1,0 +1,69 @@
+databases:
+  - name: employee-db
+    plan: free
+    databaseName: employee_db
+
+services:
+  # Spring Boot Backend Service
+  - type: web
+    name: employee-backend
+    runtime: java
+    plan: free
+    region: oregon
+    buildCommand: mvn clean package -DskipTests
+    startCommand: java -jar target/employee-service-*.jar
+    rootDir: employee-service
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: DB_HOST
+        fromDatabase:
+          name: employee-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: employee-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: employee-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: employee-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: employee-db
+          property: password
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+        value: https://employee-frontend.onrender.com
+      - key: DB_MAX_POOL_SIZE
+        value: "20"
+      - key: JWT_EXPIRATION_MS
+        value: "86400000"
+      - key: JWT_REFRESH_EXPIRATION_MS
+        value: "604800000"
+      - key: LOG_LEVEL_APP
+        value: INFO
+      - key: LOG_LEVEL_SECURITY
+        value: WARN
+      - key: LOG_LEVEL_SQL
+        value: WARN
+
+  # React Frontend (Static Site)
+  - type: web
+    name: employee-frontend
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    rootDir: frontend
+    envVars:
+      - key: VITE_API_URL
+        sync: false
+        value: https://employee-backend.onrender.com/api
